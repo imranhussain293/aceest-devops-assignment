@@ -30,6 +30,7 @@ py app.py
 Endpoints:
 
 - `GET /health` → returns `{ "status": "healthy" }`
+- `GET /programs` → returns program list + calorie factors
 
 ## Run tests
 
