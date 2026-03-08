@@ -6,6 +6,9 @@ This repository implements a minimal REST API for **ACEest Fitness & Gym** using
 - Flask API endpoints for programs, clients, and progress logging
 - SQLite database with `clients` and `progress` tables
 - Automated tests with Pytest (4 tests passing locally)
+- Containerization via Docker (Gunicorn)
+- CI via GitHub Actions (lint + docker build + in-container tests)
+- Jenkins BUILD / quality gate pipeline (Docker-based)
 
 ## API Endpoints
 
@@ -102,7 +105,54 @@ $env:DATABASE_PATH = "aceest_test.db"
 py -m pytest
 ```
 
-## DevOps Steps (next)
-- Add Dockerfile + .dockerignore
-- Add GitHub Actions workflow to run lint + tests on every push/PR
-- Add Jenkins Pipeline (BUILD) to build + test the project
+## Docker
+
+Build:
+
+```powershell
+docker build -t aceest:local .
+```
+
+Run (Gunicorn):
+
+```powershell
+docker run --rm -p 5000:5000 aceest:local
+```
+
+Then:
+
+- `GET http://localhost:5000/health`
+
+Run tests inside the container (matches CI/Jenkins):
+
+```powershell
+docker run --rm aceest:local python -m pytest
+```
+
+## GitHub Actions CI overview
+
+Workflow: `.github/workflows/main.yml`
+
+Trigger:
+
+- Every `push`
+- Every `pull_request`
+
+Stages:
+
+1. Syntax + lint: `python -m compileall app.py` and `ruff check .`
+2. Docker build: `docker build ...`
+3. Tests (in-container): `docker run ... python -m pytest`
+
+## Jenkins BUILD & quality gate overview
+
+Pipeline: `Jenkinsfile`
+
+High-level logic:
+
+- Jenkins checks out the repo
+- Builds the Docker image (`docker build ...`)
+- Runs quality gates inside that image:
+  - Syntax check (`python -m compileall app.py`)
+  - Lint (`ruff check .`)
+- Runs Pytest inside the same container image (`python -m pytest`)
