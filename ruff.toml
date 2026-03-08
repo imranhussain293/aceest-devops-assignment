@@ -1,0 +1,16 @@
+# Ruff configuration for this repository.
+# We exclude the historical "code versions" folder from linting so CI focuses on
+# the current Flask API implementation.
+
+exclude = [
+  ".git",
+  ".venv",
+  "venv",
+  "__pycache__",
+  ".pytest_cache",
+  ".ruff_cache",
+  "The code versions for DevOps Assignment",
+]
+
+target-version = "py312"
+line-length = 88
