@@ -156,3 +156,73 @@ High-level logic:
   - Syntax check (`python -m compileall app.py`)
   - Lint (`ruff check .`)
 - Runs Pytest inside the same container image (`python -m pytest`)
+
+## Jenkins (Docker Desktop) local setup
+
+This repository includes a Docker Compose-based Jenkins setup so anyone can launch Jenkins locally and run the provided `Jenkinsfile` pipeline.
+
+### Prereqs (Windows)
+
+- WSL2 enabled (recommended for Docker Desktop)
+- Docker Desktop installed and running (Linux containers)
+
+Sanity check:
+
+```powershell
+docker version
+```
+
+### Start Jenkins + Docker engine (DinD)
+
+From the repo root:
+
+```powershell
+docker compose -f docker-compose.jenkins.yml up -d --build
+docker compose -f docker-compose.jenkins.yml ps
+```
+
+Open Jenkins UI:
+
+- http://localhost:8080
+
+Get the initial admin password:
+
+```powershell
+docker compose -f docker-compose.jenkins.yml exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+```
+
+Then install “Suggested plugins” and create an admin user.
+
+Verify Jenkins can run Docker commands:
+
+```powershell
+docker compose -f docker-compose.jenkins.yml exec jenkins bash -lc "docker version"
+```
+
+### Create Jenkins job (Pipeline from SCM)
+
+1. Jenkins → **New Item** → choose **Pipeline**
+2. Under **Pipeline**:
+  - **Definition**: *Pipeline script from SCM*
+  - **SCM**: *Git*
+  - **Repository URL**: your GitHub repo URL
+  - **Branches to build**: `*/main`
+  - **Script Path**: `Jenkinsfile`
+3. Save → **Build Now**
+
+Expected stages:
+
+- Checkout
+- Build Docker Image
+- Quality Gate - Lint
+- Test
+
+### Stop Jenkins
+
+```powershell
+docker compose -f docker-compose.jenkins.yml down
+```
+
+Notes:
+
+- `docker-compose.jenkins.yml` runs a Docker-in-Docker daemon (`docker:dind`) using `privileged: true` for local development.
