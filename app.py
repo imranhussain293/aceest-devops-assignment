@@ -36,6 +36,22 @@ def init_db():
         )
     """)
 
+    # Clean up any existing duplicates (keeps the earliest row)
+    cursor.execute("""
+        DELETE FROM progress
+        WHERE id NOT IN (
+            SELECT MIN(id)
+            FROM progress
+            GROUP BY client_name, week
+        )
+    """)
+
+    # Enforce "one progress entry per client per week"
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS progress_unique_client_week
+        ON progress (client_name, week)
+    """)
+
     conn.commit()
     conn.close()
 
@@ -115,17 +131,68 @@ def create_client():
 def get_client(name):
     conn = get_db_connection()
     cursor = conn.cursor()
+
     cursor.execute(
         "SELECT name, age, weight, program, calories FROM clients WHERE name=?",
         (name,),
     )
     row = cursor.fetchone()
-    conn.close()
 
     if row is None:
+        conn.close()
         return jsonify({"error": "Client not found"}), 404
-    
-    return jsonify({"client": dict(row)}), 200
+
+    cursor.execute(
+        "SELECT week, adherence FROM progress WHERE client_name=? ORDER BY id DESC LIMIT 10",
+        (name,),
+    )
+    progress_rows = cursor.fetchall()
+    conn.close()
+
+    return jsonify(
+        {
+            "client": {
+                "name": row["name"],
+                "age": row["age"],
+                "weight": row["weight"],
+                "program": row["program"],
+                "calories": row["calories"],
+            },
+            "progress": [
+                {"week": progress_row["week"], "adherence": progress_row["adherence"]}
+                for progress_row in progress_rows
+            ],
+        }
+    )
+
+
+@app.post("/clients/<string:name>/progress")
+def log_progress(name):
+    data = request.get_json(silent=True) or {}
+    adherence = data.get("adherence")
+    week = (data.get("week") or "").strip()
+
+    if not week:
+        return jsonify({"error": "week is required"}), 400
+
+    try:
+        adherence = int(adherence)
+    except (TypeError, ValueError):
+        return jsonify({"error": "adherence must be an integer"}), 400
+
+    if not (0 <= adherence <= 100):
+        return jsonify({"error": "adherence must be between 0 and 100"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO progress (client_name, week, adherence) VALUES (?, ?, ?)",
+        (name, week, adherence),
+    )
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Progress logged successfully"}), 201
 
 @app.get("/programs")
 def get_programs():
