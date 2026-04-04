@@ -16,6 +16,8 @@ services:
     build:
       context: .
       dockerfile: jenkins/Dockerfile
+      args:
+        CURL_INSECURE: ${CURL_INSECURE:-0}
     depends_on:
       - dind
     ports:
@@ -25,9 +27,13 @@ services:
       DOCKER_HOST: tcp://docker:2376
       DOCKER_TLS_VERIFY: "1"
       DOCKER_CERT_PATH: /certs/client
+      # Optional (NOT recommended): set to any non-empty value to bypass Git HTTPS cert verification.
+      # Prefer mounting your corporate root CA into ./jenkins/certs instead.
+      GIT_SSL_NO_VERIFY: ${GIT_SSL_NO_VERIFY:-}
     volumes:
       - jenkins_home:/var/jenkins_home
       - jenkins_docker_certs:/certs/client:ro
+      - ./jenkins/certs:/certs/ca:ro
     networks:
       - jenkins
 

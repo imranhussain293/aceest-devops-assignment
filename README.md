@@ -91,6 +91,8 @@ py -m pytest
 
 ```powershell
 ruff check .
+# If `ruff` is not on PATH:
+py -m ruff check .
 ```
 
 ## Configuration
@@ -111,6 +113,12 @@ Build:
 
 ```powershell
 docker build -t aceest:local .
+```
+
+If you are behind a corporate proxy / TLS inspection and `docker build` fails during `pip install` with a certificate error, you can use:
+
+```powershell
+docker build -t aceest:local --build-arg PIP_TRUSTED_HOSTS="pypi.org files.pythonhosted.org" .
 ```
 
 Run (Gunicorn):
@@ -179,6 +187,24 @@ From the repo root:
 ```powershell
 docker compose -f docker-compose.jenkins.yml up -d --build
 docker compose -f docker-compose.jenkins.yml ps
+```
+
+If Jenkins SCM checkout fails with GitHub certificate trust errors (common in corporate TLS interception environments), the recommended fix is:
+
+1. Export your organization’s root CA as a `.crt`
+2. Place it in `jenkins/certs/`
+3. Restart Jenkins:
+
+```powershell
+docker compose -f docker-compose.jenkins.yml up -d --build
+```
+
+Fallbacks for local demo environments (not recommended for real production):
+
+```powershell
+$env:CURL_INSECURE="1"       # allow Jenkins image build to download Docker CLI behind TLS interception
+$env:GIT_SSL_NO_VERIFY="true" # bypass GitHub HTTPS verification inside Jenkins container
+docker compose -f docker-compose.jenkins.yml up -d --build
 ```
 
 Open Jenkins UI:
