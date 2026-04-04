@@ -6,6 +6,7 @@ USER root
 
 # Install curl + certificates, then install Docker CLI binary
 ARG DOCKER_VERSION=26.1.4
+ARG BUILDX_VERSION=0.16.2
 
 # Optional: for environments with TLS interception.
 # Preferred: pass CA cert as a BuildKit secret: --secret id=corp_ca,src=corp-ca.crt
@@ -28,6 +29,9 @@ RUN --mount=type=secret,id=corp_ca,required=false \
   tar -xzf /tmp/docker.tgz -C /tmp; \
   mv /tmp/docker/docker /usr/local/bin/docker; \
   chmod +x /usr/local/bin/docker; \
+  mkdir -p /usr/local/lib/docker/cli-plugins; \
+  curl ${curl_flags} "https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64" -o /usr/local/lib/docker/cli-plugins/docker-buildx; \
+  chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx; \
   rm -rf /tmp/docker /tmp/docker.tgz; \
   apt-get purge -y --auto-remove curl; \
   rm -rf /var/lib/apt/lists/*
