@@ -41,6 +41,6 @@ RUN mkdir -p /certs/ca
 COPY jenkins/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-USER jenkins
+USER root
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
