@@ -115,12 +115,6 @@ Build:
 docker build -t aceest:local .
 ```
 
-If you are behind a corporate proxy / TLS inspection and `docker build` fails during `pip install` with a certificate error, you can use:
-
-```powershell
-docker build -t aceest:local --build-arg PIP_TRUSTED_HOSTS="pypi.org files.pythonhosted.org" .
-```
-
 Run (Gunicorn):
 
 ```powershell
@@ -189,24 +183,6 @@ docker compose -f docker-compose.jenkins.yml up -d --build
 docker compose -f docker-compose.jenkins.yml ps
 ```
 
-If Jenkins SCM checkout fails with GitHub certificate trust errors (common in corporate TLS interception environments), the recommended fix is:
-
-1. Export your organization’s root CA as a `.crt`
-2. Place it in `jenkins/certs/`
-3. Restart Jenkins:
-
-```powershell
-docker compose -f docker-compose.jenkins.yml up -d --build
-```
-
-Fallbacks for local demo environments (not recommended for real production):
-
-```powershell
-$env:CURL_INSECURE="1"       # allow Jenkins image build to download Docker CLI behind TLS interception
-$env:GIT_SSL_NO_VERIFY="true" # bypass GitHub HTTPS verification inside Jenkins container
-docker compose -f docker-compose.jenkins.yml up -d --build
-```
-
 Open Jenkins UI:
 
 - http://localhost:8080
@@ -218,6 +194,38 @@ docker compose -f docker-compose.jenkins.yml exec jenkins cat /var/jenkins_home/
 ```
 
 Then install “Suggested plugins” and create an admin user.
+
+## Troubleshooting (corporate networks / TLS inspection)
+
+If your network intercepts HTTPS (MITM proxy / TLS inspection), `docker build` or Jenkins SCM checkout can fail with certificate errors (for example: "certificate signer not trusted").
+
+### Docker build fails during pip install
+
+Use the optional build arg:
+
+```powershell
+docker build -t aceest:local --build-arg PIP_TRUSTED_HOSTS="pypi.org files.pythonhosted.org" .
+```
+
+### Jenkins SCM checkout fails with GitHub TLS errors
+
+Recommended fix:
+
+1. Export your organization’s root CA as `.crt`/`.cer`/`.pem`
+2. Place it in `jenkins/certs/`
+3. Restart Jenkins:
+
+```powershell
+docker compose -f docker-compose.jenkins.yml up -d --build
+```
+
+Fallbacks for local demo environments (not recommended for real production):
+
+```powershell
+$env:CURL_INSECURE="1"        # allow Jenkins image build to download Docker CLI behind TLS interception
+$env:GIT_SSL_NO_VERIFY="true" # bypass GitHub HTTPS verification inside Jenkins container
+docker compose -f docker-compose.jenkins.yml up -d --build
+```
 
 Verify Jenkins can run Docker commands:
 
